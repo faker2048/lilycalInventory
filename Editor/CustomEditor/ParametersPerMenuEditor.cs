@@ -154,6 +154,14 @@ namespace jp.lilxyzw.lilycalinventory
             EditorPrefs.SetBool(editorPrefsKeys[index], value);
         }
 
+        private static bool GetShowState(int index, SerializedProperty property)
+        {
+            using var arrayProp = property.FPR(propertyNames[index]);
+            if(arrayProp.arraySize > 0) return true;
+            
+            return EditorPrefs.GetBool(editorPrefsKeys[index], false);
+        }
+
         private static GUIContent[] GetMenuItems()
         {
             return menuKeys.Select(key => new GUIContent(Localization.S(key))).ToArray();
@@ -161,6 +169,9 @@ namespace jp.lilxyzw.lilycalinventory
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
+            // 添加空行
+            position.y += 4;
+
             // 绘制按钮
             var buttonRect = new Rect(position.x, position.y, position.width, 20);
             if(GUI.Button(buttonRect, Localization.S("inspector.showHideComponents")))
@@ -177,7 +188,7 @@ namespace jp.lilxyzw.lilycalinventory
             using var materialPropertyModifiers = property.FPR(propertyNames[3]);
             using var clips = property.FPR(propertyNames[4]);
 
-            if(GetShowState(0))
+            if(GetShowState(0, property))
             {
                 position = GUIHelper.DragAndDropList(position, objects, true, "obj", prop =>
                 {
@@ -189,7 +200,7 @@ namespace jp.lilxyzw.lilycalinventory
                 });
             }
 
-            if(GetShowState(1))
+            if(GetShowState(1, property))
             {
                 position = GUIHelper.DragAndDropList<SkinnedMeshRenderer>(position, blendShapeModifiers, true, "skinnedMeshRenderer", prop =>
                 {
@@ -198,7 +209,7 @@ namespace jp.lilxyzw.lilycalinventory
                 });
             }
 
-            if(GetShowState(2))
+            if(GetShowState(2, property))
             {
                 position = GUIHelper.DragAndDropList<Renderer>(position, materialReplacers, true, "renderer", prop =>
                 {
@@ -207,12 +218,12 @@ namespace jp.lilxyzw.lilycalinventory
                 });
             }
 
-            if(GetShowState(3))
+            if(GetShowState(3, property))
             {
                 position = GUIHelper.List(position, materialPropertyModifiers);
             }
 
-            if(GetShowState(4))
+            if(GetShowState(4, property))
             {
                 position = GUIHelper.List(position, clips);
             }
@@ -226,8 +237,12 @@ namespace jp.lilxyzw.lilycalinventory
             for(int i = 0; i < menuItems.Length; i++)
             {
                 var index = i;
-                menu.AddItem(menuItems[i], GetShowState(i), () => {
-                    SetShowState(index, !GetShowState(index));
+                menu.AddItem(menuItems[i], GetShowState(index, property), () => {
+                    // 如果数组长度大于0，不允许隐藏
+                    using var arrayProp = property.FPR(propertyNames[index]);
+                    if(arrayProp.arraySize > 0) return;
+                    
+                    SetShowState(index, !GetShowState(index, property));
                 });
             }
 
@@ -236,7 +251,7 @@ namespace jp.lilxyzw.lilycalinventory
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            float height = 28; // 按钮高度 + 间距
+            float height = 32; // 顶部空行(4) + 按钮高度(20) + 按钮下方间距(4) + 底部间距(4)
 
             using var objects = property.FPR(propertyNames[0]);
             using var blendShapeModifiers = property.FPR(propertyNames[1]);
@@ -244,18 +259,18 @@ namespace jp.lilxyzw.lilycalinventory
             using var materialPropertyModifiers = property.FPR(propertyNames[3]);
             using var clips = property.FPR(propertyNames[4]);
 
-            if(GetShowState(0))
+            if(GetShowState(0, property))
                 height += GUIHelper.GetListHeight(property, propertyNames[0]);
-            if(GetShowState(1))
+            if(GetShowState(1, property))
                 height += GUIHelper.GetListHeight(property, propertyNames[1]);
-            if(GetShowState(2))
+            if(GetShowState(2, property))
                 height += GUIHelper.GetListHeight(property, propertyNames[2]);
-            if(GetShowState(3))
+            if(GetShowState(3, property))
                 height += GUIHelper.GetListHeight(property, propertyNames[3]);
-            if(GetShowState(4))
+            if(GetShowState(4, property))
                 height += GUIHelper.GetListHeight(property, propertyNames[4]);
 
-            return height + GUIHelper.GetSpaceHeight(3);
+            return height;
         }
     }
 
