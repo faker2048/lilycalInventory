@@ -68,21 +68,24 @@ namespace jp.lilxyzw.lilycalinventory
         private void StartPreview(AutoDresser dresser)
         {
             var gameObject = target.gameObject.GetAvatarRoot().gameObject;
-            var dressers = gameObject.GetComponentsInChildren<AutoDresser>(true).Where(c => c.enabled).ToArray();
+            var allDressers = gameObject.GetComponentsInChildren<AutoDresser>(true).Where(c => c.enabled).ToArray();
             
-            // create a parameter list to disable other dressers
+            // 获取同组的 dressers
+            var groupDressers = allDressers.Where(d => d.parentAutoDresserSettings == dresser.parentAutoDresserSettings).ToArray();
+            
+            // 创建用于禁用同组其他 dressers 的参数列表
             var disableParameters = new ParametersPerMenu();
-            disableParameters.objects = dressers.Where(d => d != dresser)  
-                .Select(d => d.gameObject)  
-                .Select(go => new ObjectToggler { obj = go, value = false })  
+            disableParameters.objects = groupDressers.Where(d => d != dresser)
+                .Select(d => d.gameObject)
+                .Select(go => new ObjectToggler { obj = go, value = false })
                 .ToArray();
             
-            // get the parameters of the current dresser
+            // 获取当前 dresser 的参数
             var parameters = new[] { dresser }.DresserToCostumes(out Transform avatarRoot, null, new Preset[]{}, dresser)
                 .Select(c => c.parametersPerMenu)
                 .ToArray();
             
-            // merge parameters: disable other dressers first, then apply the current dresser's effect
+            // 合并参数：先禁用同组其他 dressers，然后应用当前 dresser 的效果
             if(parameters.Length > 0)
             {
                 parameters[0].objects = parameters[0].objects.Union(disableParameters.objects).ToArray();
