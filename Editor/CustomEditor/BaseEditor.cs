@@ -86,8 +86,10 @@ namespace jp.lilxyzw.lilycalinventory
                 {
                     // 统计当前激活的AutoDresser组件数量
                     int activeCount = 0;
+                    AutoDresserSettings parentAutoDresserSettings = dresser.parentAutoDresserSettings;
                     foreach(var d in root.GetComponentsInChildren<AutoDresser>(true))
                     {
+                        if (d.parentAutoDresserSettings != parentAutoDresserSettings) continue;
                         if(!d.enabled || d.IsEditorOnly()) continue;
                         using var so = new SerializedObject(d.gameObject);
                         using var sp = so.FindProperty("m_IsActive");
