@@ -16,6 +16,26 @@ namespace jp.lilxyzw.lilycalinventory
             return "None";
         }
 
+        /// <summary>
+        /// 递归向上查找直到找到第一个符合条件的父级组件
+        /// </summary>
+        /// <typeparam name="T">要查找的组件类型</typeparam>
+        /// <param name="component">起始组件</param>
+        /// <param name="predicate">用于判断是否是目标组件的条件</param>
+        /// <returns>符合条件的第一个组件，如果没找到则返回null</returns>
+        internal static T GetComponentInParentRecursiveFirst<T>(this GameObject gameObject, System.Func<T, bool> predicate) where T : Component
+        {
+            var parent = gameObject.transform.parent;
+            while(parent != null)
+            {
+                var component = parent.GetComponent<T>();
+                if(component != null && predicate(component))
+                    return component;
+                parent = parent.parent;
+            }
+            return null;
+        }
+
         internal static T GetComponentInParentInRoot<T>(this GameObject gameObject, Transform root) where T : Object
         {
             var parent = gameObject.transform.parent;

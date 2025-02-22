@@ -69,6 +69,15 @@ namespace jp.lilxyzw.lilycalinventory
             return component.gameObject.GetComponentInParentInAvatar<MenuFolder>();
         }
 
+        /// <summary>
+        /// 递归向上查找第一个MenuFolder
+        /// </summary>
+        internal static MenuFolder GetMenuParentRecursiveFirst(this MenuBaseComponent component)
+        {
+            if(component.parentOverride) return component.parentOverride;
+            return component.gameObject.GetComponentInParentRecursiveFirst<MenuFolder>(f => true);
+        }
+
         // メッシュが空っぽのときに全メッシュをアニメーション対象にするようにする
         internal static void CheckApplyToAll(ItemToggler[] togglers, CostumeChanger[] costumeChangers, SmoothChanger[] smoothChangers)
         {
