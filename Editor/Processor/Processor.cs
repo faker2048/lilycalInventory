@@ -29,7 +29,7 @@ namespace jp.lilxyzw.lilycalinventory
         // メニュー系コンポーネント
         private static AvatarTagComponent[] components;
         private static AutoDresserSettings[] dresserSettings;
-        private static AutoDresser[] dressers;
+        private static AutoDresser[] dressers_all;
         private static Prop[] props;
         private static MenuFolder[] folders;
         private static ItemToggler[] togglers;
@@ -76,17 +76,26 @@ namespace jp.lilxyzw.lilycalinventory
             }
             foreach(var d in deleteDressers) Object.DestroyImmediate(d);
 
-            dressers = ctx.AvatarRootObject.GetActiveComponentsInChildren<AutoDresser>(true);
+            dressers_all = ctx.AvatarRootObject.GetActiveComponentsInChildren<AutoDresser>(true);
             props = ctx.AvatarRootObject.GetActiveComponentsInChildren<Prop>(true);
-            actives = dressers.Select(d => (d.gameObject,d.gameObject.activeSelf)).Union(props.Select(p => (p.gameObject,p.gameObject.activeSelf))).ToArray();
+            actives = dressers_all.Select(d => (d.gameObject,d.gameObject.activeSelf)).Union(props.Select(p => (p.gameObject,p.gameObject.activeSelf))).ToArray();
 
             // AutoDresserをCostumeChangerに変換
-            dresserSettings = ctx.AvatarRootObject.GetActiveComponentsInChildren<AutoDresserSettings>(false);
-            // if(dresserSettings.Length > 1) ErrorHelper.Report("dialog.error.dresserSettingsDuplicate", dresserSettings);
-            dressers.ResolveMenuName();
-            dressers.DresserToChanger(dresserSettings, presets);
+            {
+                dresserSettings = ctx.AvatarRootObject.GetActiveComponentsInChildren<AutoDresserSettings>(false);
+                // 按 dressers.parentAutoDresserSettings 分组
+                var groups = dressers_all.GroupBy(d => d.parentAutoDresserSettings);
+                foreach(var group in groups)
+                {
+                    var settings = group.Key;
+                    var dressers = group.ToArray();
+                    if(dressers.Length == 0) continue;  
 
-            // PropをItemTogglerに変換
+                    dressers.ResolveMenuName();
+                    dressers.DresserToChanger(settings, presets);
+                }
+            }
+
             props.ResolveMenuName();
             props.PropToToggler(presets);
 
@@ -299,13 +308,13 @@ namespace jp.lilxyzw.lilycalinventory
             #endif
         }
 
-        private static void DresserToChanger(this AutoDresser[] dressers, AutoDresserSettings[] settings, Preset[] presets)
+        private static void DresserToChanger(this AutoDresser[] dressers, AutoDresserSettings settings, Preset[] presets)
         {
             if(dressers == null || dressers.Length == 0) return;
             CostumeChanger changer;
-            if(settings.Length == 1 && settings[0])
+            if(settings != null)
             {
-                var s = settings[0];
+                var s = settings;
                 changer = s.gameObject.AddComponent<CostumeChanger>();
                 changer.menuName = s.menuName;
                 changer.icon = s.icon;
