@@ -82,7 +82,7 @@ namespace jp.lilxyzw.lilycalinventory
 
             // AutoDresserをCostumeChangerに変換
             dresserSettings = ctx.AvatarRootObject.GetActiveComponentsInChildren<AutoDresserSettings>(false);
-            if(dresserSettings.Length > 1) ErrorHelper.Report("dialog.error.dresserSettingsDuplicate", dresserSettings);
+            // if(dresserSettings.Length > 1) ErrorHelper.Report("dialog.error.dresserSettingsDuplicate", dresserSettings);
             dressers.ResolveMenuName();
             dressers.DresserToChanger(dresserSettings, presets);
 

@@ -44,7 +44,6 @@
   "inspector.animationSettings": "# 动画设定",
   "inspector.folderContents": "# 文件夹内容",
   "inspector.folderContentsCircularReference": "检测到循环引用。请更改父文件夹。",
-  "inspector.parametersWith": "# 联动更改 (高级)",
   "inspector.detailSettings": "# 细节设定",
 
   "inspector.isSave": "保存状态",
@@ -145,5 +144,13 @@
   "dialog.error.menuCircularReference": "MenuFolder 具有循环引用。请更改父文件夹。",
   "dialog.error.autoFixMeshSettingsDuplication": "There are multiple AutoFixMeshSettings. Please enable only one.",
   "dialog.error.menuMADuplication": "MA 菜单项被多个组件引用。确保为每个组件创建一个 MA 菜单项。",
-  "dialog.error.testInEditor": "Please select an avatar in PlayMode before executing this."
+  "dialog.error.testInEditor": "Please select an avatar in PlayMode before executing this.",
+
+  "inspector.showHideComponents": "显示/隐藏动作",
+  "inspector.showObjects": "显示对象切换器",
+  "inspector.showBlendShapes": "显示BlendShape修改器",
+  "inspector.showMaterials": "显示材质替换器",
+  "inspector.showProperties": "显示材质属性",
+  "inspector.showAnimations": "显示动画片段",
+  "inspector.keepOneEnabled": "至少需要保持一个组件显示。"
 }

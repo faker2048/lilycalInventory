@@ -13,7 +13,6 @@ namespace jp.lilxyzw.lilycalinventory.runtime
         [NotKeyable] [LILLocalize] [SerializeField] internal bool isSave = true;
         [NotKeyable] [LILLocalize] [SerializeField] internal bool isLocalOnly = false;
         [NotKeyable] [LILLocalize] [SerializeField] internal bool autoFixDuplicate = true;
-        [Space(order = 0)] [LILLocalizeHeader("inspector.parametersWith", 1)]
         [NotKeyable] [LILBox] [SerializeField] internal ParametersPerMenu parameter = new ParametersPerMenu();
     }
 }

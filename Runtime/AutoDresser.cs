@@ -9,7 +9,6 @@ namespace jp.lilxyzw.lilycalinventory.runtime
     [HelpURL(ConstantValues.URL_DOCS_COMPONENT + "autodresser")]
     public class AutoDresser : MenuBaseDisallowMultipleComponent
     {
-        [Space(order = 0)] [LILLocalizeHeader("inspector.parametersWith", 1)]
         [NotKeyable] [LILBox] [SerializeField] internal ParametersPerMenu parameter = new ParametersPerMenu();
     }
 }

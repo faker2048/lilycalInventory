@@ -44,7 +44,6 @@
   "inspector.animationSettings": "# アニメーション設定",
   "inspector.folderContents": "# フォルダの中身",
   "inspector.folderContentsCircularReference": "循環参照が検出されました。親フォルダを変更してください。",
-  "inspector.parametersWith": "# 一緒に操作するパラメーター（拡張設定）",
   "inspector.detailSettings": "# 詳細設定",
 
   "inspector.isSave": "有効状態を保存",
@@ -145,5 +144,12 @@
   "dialog.error.menuCircularReference": "MenuFolderに循環参照があります。親フォルダを変更してください。",
   "dialog.error.autoFixMeshSettingsDuplication": "AutoFixMeshSettingsが複数存在します。1つだけを有効化してください。",
   "dialog.error.menuMADuplication": "MA Menu Itemが複数コンポーネントから参照されています。それぞれのコンポーネントにつき1つのMA Menu Itemを作成するようにしてください。",
-  "dialog.error.testInEditor": "PlayModeのときにアバターを選択してから実行してください。"
+  "dialog.error.testInEditor": "PlayModeのときにアバターを選択してから実行してください。",
+  "inspector.showHideComponents": "アクションの表示/非表示",
+  "inspector.showObjects": "オブジェクトトグラーを表示",
+  "inspector.showBlendShapes": "BlendShape修正を表示",
+  "inspector.showMaterials": "マテリアル置換を表示",
+  "inspector.showProperties": "マテリアルプロパティを表示",
+  "inspector.showAnimations": "アニメーションクリップを表示",
+  "inspector.keepOneEnabled": "少なくとも1つのコンポーネントを有効にする必要があります。"
 }

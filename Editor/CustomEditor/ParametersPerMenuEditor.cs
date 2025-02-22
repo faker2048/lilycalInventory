@@ -117,43 +117,145 @@ namespace jp.lilxyzw.lilycalinventory
     [CustomPropertyDrawer(typeof(ParametersPerMenu))]
     internal class ParametersPerMenuDrawer : PropertyDrawer
     {
+        private static readonly string[] menuKeys = new[]
+        {
+            "inspector.showObjects",
+            "inspector.showBlendShapes",
+            "inspector.showMaterials",
+            "inspector.showProperties",
+            "inspector.showAnimations"
+        };
+
+        private static readonly string[] propertyNames = new[]
+        {
+            "objects",
+            "blendShapeModifiers",
+            "materialReplacers",
+            "materialPropertyModifiers",
+            "clips"
+        };
+
+        private static readonly string[] editorPrefsKeys = new[]
+        {
+            "lilycalInventory_showObjects",
+            "lilycalInventory_showBlendShapes",
+            "lilycalInventory_showMaterials",
+            "lilycalInventory_showProperties",
+            "lilycalInventory_showAnimations"
+        };
+
+        private static bool GetShowState(int index)
+        {
+            return EditorPrefs.GetBool(editorPrefsKeys[index], false);
+        }
+
+        private static void SetShowState(int index, bool value)
+        {
+            EditorPrefs.SetBool(editorPrefsKeys[index], value);
+        }
+
+        private static GUIContent[] GetMenuItems()
+        {
+            return menuKeys.Select(key => new GUIContent(Localization.S(key))).ToArray();
+        }
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            using var objects = property.FPR("objects");
-            using var blendShapeModifiers = property.FPR("blendShapeModifiers");
-            using var materialReplacers = property.FPR("materialReplacers");
-            using var materialPropertyModifiers = property.FPR("materialPropertyModifiers");
-            using var clips = property.FPR("clips");
-            position = GUIHelper.DragAndDropList(position, objects, true, "obj", prop =>
+            // 绘制按钮
+            var buttonRect = new Rect(position.x, position.y, position.width, 20);
+            if(GUI.Button(buttonRect, Localization.S("inspector.showHideComponents")))
             {
-                prop.FPR("obj").objectReferenceValue = null;
-                prop.FPR("value").boolValue = true;
-            }, actionPerObject: (sp,o) => {
-                if(o is not GameObject go) return;
-                sp.FPR("value").boolValue = !go.activeSelf;
-            });
-            position = GUIHelper.DragAndDropList<SkinnedMeshRenderer>(position, blendShapeModifiers, true, "skinnedMeshRenderer", prop =>
+                ShowSettingsMenu(property);
+            }
+
+            // 内容区域
+            position.y = buttonRect.yMax + 4;
+
+            using var objects = property.FPR(propertyNames[0]);
+            using var blendShapeModifiers = property.FPR(propertyNames[1]);
+            using var materialReplacers = property.FPR(propertyNames[2]);
+            using var materialPropertyModifiers = property.FPR(propertyNames[3]);
+            using var clips = property.FPR(propertyNames[4]);
+
+            if(GetShowState(0))
             {
-                prop.FPR("skinnedMeshRenderer").objectReferenceValue = null;
-                prop.FPR("blendShapeNameValues").arraySize = 0;
-            });
-            position = GUIHelper.DragAndDropList<Renderer>(position, materialReplacers, true, "renderer", prop =>
+                position = GUIHelper.DragAndDropList(position, objects, true, "obj", prop =>
+                {
+                    prop.FPR("obj").objectReferenceValue = null;
+                    prop.FPR("value").boolValue = true;
+                }, actionPerObject: (sp,o) => {
+                    if(o is not GameObject go) return;
+                    sp.FPR("value").boolValue = !go.activeSelf;
+                });
+            }
+
+            if(GetShowState(1))
             {
-                prop.FPR("renderer").objectReferenceValue = null;
-                prop.FPR("replaceTo").arraySize = 0;
-            });
-            position = GUIHelper.List(position, materialPropertyModifiers);
-            position = GUIHelper.List(position, clips);
+                position = GUIHelper.DragAndDropList<SkinnedMeshRenderer>(position, blendShapeModifiers, true, "skinnedMeshRenderer", prop =>
+                {
+                    prop.FPR("skinnedMeshRenderer").objectReferenceValue = null;
+                    prop.FPR("blendShapeNameValues").arraySize = 0;
+                });
+            }
+
+            if(GetShowState(2))
+            {
+                position = GUIHelper.DragAndDropList<Renderer>(position, materialReplacers, true, "renderer", prop =>
+                {
+                    prop.FPR("renderer").objectReferenceValue = null;
+                    prop.FPR("replaceTo").arraySize = 0;
+                });
+            }
+
+            if(GetShowState(3))
+            {
+                position = GUIHelper.List(position, materialPropertyModifiers);
+            }
+
+            if(GetShowState(4))
+            {
+                position = GUIHelper.List(position, clips);
+            }
+        }
+
+        private void ShowSettingsMenu(SerializedProperty property)
+        {
+            var menu = new GenericMenu();
+            var menuItems = GetMenuItems();
+
+            for(int i = 0; i < menuItems.Length; i++)
+            {
+                var index = i;
+                menu.AddItem(menuItems[i], GetShowState(i), () => {
+                    SetShowState(index, !GetShowState(index));
+                });
+            }
+
+            menu.ShowAsContext();
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return GUIHelper.GetListHeight(property, "objects") +
-                GUIHelper.GetListHeight(property, "blendShapeModifiers") +
-                GUIHelper.GetListHeight(property, "materialReplacers") +
-                GUIHelper.GetListHeight(property, "materialPropertyModifiers") +
-                GUIHelper.GetListHeight(property, "clips") +
-                GUIHelper.GetSpaceHeight(3);
+            float height = 28; // 按钮高度 + 间距
+
+            using var objects = property.FPR(propertyNames[0]);
+            using var blendShapeModifiers = property.FPR(propertyNames[1]);
+            using var materialReplacers = property.FPR(propertyNames[2]);
+            using var materialPropertyModifiers = property.FPR(propertyNames[3]);
+            using var clips = property.FPR(propertyNames[4]);
+
+            if(GetShowState(0))
+                height += GUIHelper.GetListHeight(property, propertyNames[0]);
+            if(GetShowState(1))
+                height += GUIHelper.GetListHeight(property, propertyNames[1]);
+            if(GetShowState(2))
+                height += GUIHelper.GetListHeight(property, propertyNames[2]);
+            if(GetShowState(3))
+                height += GUIHelper.GetListHeight(property, propertyNames[3]);
+            if(GetShowState(4))
+                height += GUIHelper.GetListHeight(property, propertyNames[4]);
+
+            return height + GUIHelper.GetSpaceHeight(3);
         }
     }
 
