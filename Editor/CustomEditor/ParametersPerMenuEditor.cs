@@ -211,10 +211,167 @@ namespace jp.lilxyzw.lilycalinventory
 
             if(GetShowState(2, property))
             {
-                position = GUIHelper.DragAndDropList<Renderer>(position, materialReplacers, true, "renderer", prop =>
+                // 添加递归模式切换按钮
+                var recursiveModeButtonRect = position.SingleLine();
+                var isRecursiveMode = EditorPrefs.GetBool("lilycalInventory_recursiveRendererMode", false);
+                var buttonContent = new GUIContent(isRecursiveMode ? "递归模式(开)" : "递归模式(关)", "开启后，拖入GameObject时会自动添加其所有子对象中的Renderer");
+                if(GUI.Button(recursiveModeButtonRect, buttonContent))
+                {
+                    EditorPrefs.SetBool("lilycalInventory_recursiveRendererMode", !isRecursiveMode);
+                }
+                position = position.NewLine();
+
+                // 添加批量替换UI
+                if(materialReplacers.arraySize > 0)
+                {
+                    // 收集所有未替换的材质
+                    var unassignedMaterials = new Dictionary<Material, List<(SerializedProperty replacer, int index)>>();
+                    for(int i = 0; i < materialReplacers.arraySize; i++)
+                    {
+                        var replacer = materialReplacers.GetArrayElementAtIndex(i);
+                        var renderer = replacer.FindPropertyRelative("renderer").objectReferenceValue as Renderer;
+                        var replaceTo = replacer.FindPropertyRelative("replaceTo");
+                        
+                        if(renderer != null)
+                        {
+                            var materials = renderer.sharedMaterials;
+                            for(int j = 0; j < materials.Length; j++)
+                            {
+                                var originalMat = materials[j];
+                                if(originalMat != null)
+                                {
+                                    var replaceToElement = replaceTo.GetArrayElementAtIndex(j);
+                                    if(replaceToElement.objectReferenceValue == null)
+                                    {
+                                        if(!unassignedMaterials.ContainsKey(originalMat))
+                                        {
+                                            unassignedMaterials[originalMat] = new List<(SerializedProperty, int)>();
+                                        }
+                                        unassignedMaterials[originalMat].Add((replaceTo, j));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 显示批量替换界面
+                    if(unassignedMaterials.Count > 0)
+                    {
+                        EditorGUI.LabelField(position.SingleLine(), "批量材质替换");
+                        position = position.NewLine();
+                        
+                        foreach(var kvp in unassignedMaterials)
+                        {
+                            var originalMat = kvp.Key;
+                            var replacements = kvp.Value;
+                            
+                            // 创建一行用于显示原始材质和替换材质
+                            var lineRect = position.SingleLine();
+                            
+                            // 显示原始材质（左侧，禁用状态）
+                            var originalRect = new Rect(lineRect.x, lineRect.y, lineRect.width * 0.5f - 2, lineRect.height);
+                            EditorGUI.BeginDisabledGroup(true);
+                            EditorGUI.ObjectField(originalRect, originalMat, typeof(Material), false);
+                            EditorGUI.EndDisabledGroup();
+                            
+                            // 显示替换材质拖放区域（右侧）
+                            var replaceRect = new Rect(lineRect.x + lineRect.width * 0.5f + 2, lineRect.y, lineRect.width * 0.5f - 2, lineRect.height);
+                            var newMaterial = EditorGUI.ObjectField(replaceRect, null, typeof(Material), false) as Material;
+                            
+                            // 如果用户拖入了新材质，更新所有相关的replaceTo
+                            if(newMaterial != null)
+                            {
+                                foreach(var replacement in replacements)
+                                {
+                                    replacement.replacer.GetArrayElementAtIndex(replacement.index).objectReferenceValue = newMaterial;
+                                }
+                                materialReplacers.serializedObject.ApplyModifiedProperties();
+                            }
+                            
+                            position = position.NewLine();
+                        }
+                        
+                        // 添加一个分隔线
+                        position.y += 8;
+                    }
+                }
+
+                // 修改DragAndDropList的处理逻辑，改用非泛型版本
+                position = GUIHelper.DragAndDropList(position, materialReplacers, true, "renderer", prop =>
                 {
                     prop.FPR("renderer").objectReferenceValue = null;
                     prop.FPR("replaceTo").arraySize = 0;
+                }, o => {
+                    // 允许拖入 Renderer 或 GameObject
+                    if(o is Renderer) return true;
+                    if(o is GameObject go)
+                    {
+                        // 在递归模式下，只要有任何子对象包含 Renderer 就允许拖入
+                        if(EditorPrefs.GetBool("lilycalInventory_recursiveRendererMode", false))
+                        {
+                            return go.GetComponentsInChildren<Renderer>(true).Length > 0;
+                        }
+                        // 非递归模式下，只允许拖入自身带有 Renderer 的 GameObject
+                        return go.GetComponent<Renderer>() != null;
+                    }
+                    return false;
+                }, (sp, obj) => {
+                    if(obj is GameObject go)
+                    {
+                        if(EditorPrefs.GetBool("lilycalInventory_recursiveRendererMode", false))
+                        {
+                            // 在递归模式下，获取所有子对象的Renderer
+                            var renderers = go.GetComponentsInChildren<Renderer>(true);
+                            if(renderers.Length > 0)
+                            {
+                                // 删除当前添加的项（因为DragAndDropList会自动添加一个）
+                                materialReplacers.arraySize--;
+                                
+                                // 添加所有找到的Renderer
+                                foreach(var renderer in renderers)
+                                {
+                                    // 检查是否已存在
+                                    bool exists = false;
+                                    for(int i = 0; i < materialReplacers.arraySize; i++)
+                                    {
+                                        var existingRenderer = materialReplacers.GetArrayElementAtIndex(i).FindPropertyRelative("renderer").objectReferenceValue as Renderer;
+                                        if(existingRenderer == renderer)
+                                        {
+                                            exists = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if(!exists)
+                                    {
+                                        materialReplacers.arraySize++;
+                                        var element = materialReplacers.GetArrayElementAtIndex(materialReplacers.arraySize - 1);
+                                        element.FindPropertyRelative("renderer").objectReferenceValue = renderer;
+                                        var replaceTo = element.FindPropertyRelative("replaceTo");
+                                        replaceTo.arraySize = renderer.sharedMaterials.Length;
+                                    }
+                                }
+                                materialReplacers.serializedObject.ApplyModifiedProperties();
+                            }
+                        }
+                        else
+                        {
+                            // 非递归模式下，直接获取 Renderer
+                            var renderer = go.GetComponent<Renderer>();
+                            if(renderer)
+                            {
+                                sp.FPR("renderer").objectReferenceValue = renderer;
+                                var replaceTo = sp.FPR("replaceTo");
+                                replaceTo.arraySize = renderer.sharedMaterials.Length;
+                            }
+                        }
+                    }
+                    else if(obj is Renderer renderer)
+                    {
+                        sp.FPR("renderer").objectReferenceValue = renderer;
+                        var replaceTo = sp.FPR("replaceTo");
+                        replaceTo.arraySize = renderer.sharedMaterials.Length;
+                    }
                 });
             }
 
@@ -416,8 +573,8 @@ namespace jp.lilxyzw.lilycalinventory
             }
             replaceTo.ResizeArray(materials.Length, p => p.objectReferenceValue = null);
 
-            position.Indent();
-            EditorGUI.LabelField(position.NewLine(), Localization.G("inspector.replaceTo"));
+            // position.Indent();
+            // EditorGUI.LabelField(position.NewLine(), Localization.G("inspector.replaceTo"));
             position = GUIHelper.SimpleList(replaceTo, position.NewLine(), materials);
         }
 
