@@ -67,6 +67,7 @@ namespace jp.lilxyzw.lilycalinventory
                     {
                         var costume = changer.costumes[i];
                         if(costume.parentOverrideMA) continue;
+                        if(costume.menuName == "NoMenuEmpty") continue;
                         var parent = costume.parentOverride ? costume.parentOverride : changer as MenuBaseComponent;
                         if(!controls.ContainsKey(changer))
                         {
