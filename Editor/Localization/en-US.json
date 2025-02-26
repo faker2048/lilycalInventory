@@ -151,6 +151,11 @@
   "inspector.showBlendShapes": "Show BlendShape Modifiers",
   "inspector.showMaterials": "Show Material Replacers",
   "inspector.showProperties": "Show Material Properties",
+  "inspector.showVRCParameters": "Show VRC Parameter Setters",
   "inspector.showAnimations": "Show Animation Clips",
-  "inspector.keepOneEnabled": "At least one component must remain enabled."
+  "inspector.keepOneEnabled": "At least one component must remain enabled.",
+
+  "inspector.floatValue": "Float Value",
+  "inspector.intValue": "Int Value",
+  "inspector.boolValue": "Bool Value"
 }

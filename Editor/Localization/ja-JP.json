@@ -150,6 +150,11 @@
   "inspector.showBlendShapes": "BlendShape修正を表示",
   "inspector.showMaterials": "マテリアル置換を表示",
   "inspector.showProperties": "マテリアルプロパティを表示",
+  "inspector.showVRCParameters": "VRCパラメーターセッターを表示",
   "inspector.showAnimations": "アニメーションクリップを表示",
-  "inspector.keepOneEnabled": "少なくとも1つのコンポーネントを有効にする必要があります。"
+  "inspector.keepOneEnabled": "少なくとも1つのコンポーネントを有効にする必要があります。",
+  
+  "inspector.floatValue": "Float値",
+  "inspector.intValue": "Int値",
+  "inspector.boolValue": "Bool値"
 }

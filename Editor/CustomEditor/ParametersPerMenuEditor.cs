@@ -124,6 +124,7 @@ namespace jp.lilxyzw.lilycalinventory
             "inspector.showBlendShapes",
             "inspector.showMaterials",
             "inspector.showProperties",
+            "inspector.showVRCParameters",
             "inspector.showAnimations"
         };
 
@@ -133,6 +134,7 @@ namespace jp.lilxyzw.lilycalinventory
             "blendShapeModifiers",
             "materialReplacers",
             "materialPropertyModifiers",
+            "vrcParameterSetters",
             "clips"
         };
 
@@ -142,6 +144,7 @@ namespace jp.lilxyzw.lilycalinventory
             "lilycalInventory_showBlendShapes",
             "lilycalInventory_showMaterials",
             "lilycalInventory_showProperties",
+            "lilycalInventory_showVRCParameters",
             "lilycalInventory_showAnimations"
         };
 
@@ -210,7 +213,8 @@ namespace jp.lilxyzw.lilycalinventory
             using var blendShapeModifiers = property.FPR(propertyNames[1]);
             using var materialReplacers = property.FPR(propertyNames[2]);
             using var materialPropertyModifiers = property.FPR(propertyNames[3]);
-            using var clips = property.FPR(propertyNames[4]);
+            using var vrcParameterSetters = property.FPR(propertyNames[4]);
+            using var clips = property.FPR(propertyNames[5]);
 
             if(GetShowState(0, property))
             {
@@ -409,6 +413,11 @@ namespace jp.lilxyzw.lilycalinventory
             }
 
             if(GetShowState(4, property))
+            {
+                position = GUIHelper.List(position, vrcParameterSetters);
+            }
+
+            if(GetShowState(5, property))
             {
                 position = GUIHelper.List(position, clips);
             }
@@ -708,6 +717,59 @@ namespace jp.lilxyzw.lilycalinventory
         }
 
         // プロパティ名、ベクトル、トグルで3行
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+        {
+            return GUIHelper.propertyHeight * 3 + GUIHelper.GetSpaceHeight(3);
+        }
+    }
+
+    // VRCパラメータ設定の表示
+    [CustomPropertyDrawer(typeof(VRCParameterSetter))]
+    internal class VRCParameterSetterDrawer : PropertyDrawer
+    {
+        private static readonly string[] parameterTypeNames = new[]
+        {
+            "Float",
+            "Int",
+            "Bool"
+        };
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            using var parameterName = property.FPR("parameterName");
+            using var parameterType = property.FPR("parameterType");
+            using var floatValue = property.FPR("floatValue");
+            using var intValue = property.FPR("intValue");
+            using var boolValue = property.FPR("boolValue");
+
+            EditorGUIUtility.labelWidth = 100;
+            EditorGUI.PropertyField(position.SingleLine(), parameterName, new GUIContent("Parameter Name"));
+
+            EditorGUI.BeginChangeCheck();
+            var typeRect = position.NewLine();
+            int selectedType = EditorGUI.Popup(typeRect, "Parameter Type", parameterType.enumValueIndex, parameterTypeNames);
+            if(EditorGUI.EndChangeCheck())
+            {
+                parameterType.enumValueIndex = selectedType;
+            }
+
+            var valueRect = position.NewLine();
+            switch((VRCParameterType)parameterType.enumValueIndex)
+            {
+                case VRCParameterType.Float:
+                    EditorGUI.PropertyField(valueRect, floatValue, new GUIContent("Float Value"));
+                    break;
+                case VRCParameterType.Int:
+                    EditorGUI.PropertyField(valueRect, intValue, new GUIContent("Int Value"));
+                    break;
+                case VRCParameterType.Bool:
+                    EditorGUI.PropertyField(valueRect, boolValue, new GUIContent("Bool Value"));
+                    break;
+            }
+
+            EditorGUIUtility.labelWidth = 0;
+        }
+
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             return GUIHelper.propertyHeight * 3 + GUIHelper.GetSpaceHeight(3);

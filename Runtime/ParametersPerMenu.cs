@@ -35,6 +35,7 @@ namespace jp.lilxyzw.lilycalinventory.runtime
         public BlendShapeModifier[] blendShapeModifiers = new BlendShapeModifier[]{};
         public MaterialReplacer[] materialReplacers = new MaterialReplacer[]{};
         public MaterialPropertyModifier[] materialPropertyModifiers = new MaterialPropertyModifier[]{};
+        public VRCParameterSetter[] vrcParameterSetters = new VRCParameterSetter[]{};
         public AnimationClip[] clips = new AnimationClip[]{};
     }
 
@@ -97,4 +98,23 @@ namespace jp.lilxyzw.lilycalinventory.runtime
     interface LILElement {}
     interface LILElementWithoutChildrenFoldout {}
     interface LILElementSimple {}
+
+    // VRCパラメータを設定するためのクラス
+    [Serializable]
+    internal class VRCParameterSetter : LILElement
+    {
+        [LILLocalize] public string parameterName;
+        public VRCParameterType parameterType = VRCParameterType.Float;
+        [LILLocalize] public float floatValue;
+        [LILLocalize] public int intValue;
+        [LILLocalize] public bool boolValue;
+    }
+
+    // VRCパラメータの型
+    internal enum VRCParameterType
+    {
+        Float,
+        Int,
+        Bool
+    }
 }

@@ -151,6 +151,11 @@
   "inspector.showBlendShapes": "显示BlendShape修改器",
   "inspector.showMaterials": "显示材质替换器",
   "inspector.showProperties": "显示材质属性",
+  "inspector.showVRCParameters": "显示VRC参数设定",
   "inspector.showAnimations": "显示动画片段",
-  "inspector.keepOneEnabled": "至少需要保持一个组件显示。"
+  "inspector.keepOneEnabled": "至少需要保持一个组件显示。",
+  
+  "inspector.floatValue": "浮点值",
+  "inspector.intValue": "整数值",
+  "inspector.boolValue": "布尔值"
 }
