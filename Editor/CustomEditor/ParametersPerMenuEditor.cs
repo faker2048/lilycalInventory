@@ -743,11 +743,11 @@ namespace jp.lilxyzw.lilycalinventory
             using var boolValue = property.FPR("boolValue");
 
             EditorGUIUtility.labelWidth = 100;
-            EditorGUI.PropertyField(position.SingleLine(), parameterName, new GUIContent("Parameter Name"));
+            EditorGUI.PropertyField(position.SingleLine(), parameterName, new GUIContent(Localization.G("inspector.parameterName")));
 
             EditorGUI.BeginChangeCheck();
             var typeRect = position.NewLine();
-            int selectedType = EditorGUI.Popup(typeRect, Localization.Get("inspector.parameterType"), parameterType.enumValueIndex, parameterTypeNames);
+            int selectedType = EditorGUI.Popup(typeRect, new GUIContent(Localization.G("inspector.parameterType")), parameterType.enumValueIndex, parameterTypeNames.Select(name => new GUIContent(name)).ToArray());
             if(EditorGUI.EndChangeCheck())
             {
                 parameterType.enumValueIndex = selectedType;
@@ -757,13 +757,13 @@ namespace jp.lilxyzw.lilycalinventory
             switch((VRCParameterType)parameterType.enumValueIndex)
             {
                 case VRCParameterType.Float:
-                    EditorGUI.PropertyField(valueRect, floatValue, new GUIContent(Localization.Get("inspector.floatValue")));
+                    EditorGUI.PropertyField(valueRect, floatValue, new GUIContent(Localization.G("inspector.floatValue")));
                     break;
                 case VRCParameterType.Int:
-                    EditorGUI.PropertyField(valueRect, intValue, new GUIContent(Localization.Get("inspector.intValue")));
+                    EditorGUI.PropertyField(valueRect, intValue, new GUIContent(Localization.G("inspector.intValue")));
                     break;
                 case VRCParameterType.Bool:
-                    EditorGUI.PropertyField(valueRect, boolValue, new GUIContent(Localization.Get("inspector.boolValue")));
+                    EditorGUI.PropertyField(valueRect, boolValue, new GUIContent(Localization.G("inspector.boolValue")));
                     break;
             }
 
