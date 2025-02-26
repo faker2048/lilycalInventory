@@ -157,5 +157,7 @@
 
   "inspector.floatValue": "Float Value",
   "inspector.intValue": "Int Value",
-  "inspector.boolValue": "Bool Value"
+  "inspector.boolValue": "Bool Value",
+  
+  "inspector.parameterType": "Parameter Type"
 }

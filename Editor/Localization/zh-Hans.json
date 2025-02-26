@@ -157,5 +157,7 @@
   
   "inspector.floatValue": "浮点值",
   "inspector.intValue": "整数值",
-  "inspector.boolValue": "布尔值"
+  "inspector.boolValue": "布尔值",
+  
+  "inspector.parameterType": "参数类型"
 }

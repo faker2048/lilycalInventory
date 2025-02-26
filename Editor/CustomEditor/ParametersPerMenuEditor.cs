@@ -747,7 +747,7 @@ namespace jp.lilxyzw.lilycalinventory
 
             EditorGUI.BeginChangeCheck();
             var typeRect = position.NewLine();
-            int selectedType = EditorGUI.Popup(typeRect, "Parameter Type", parameterType.enumValueIndex, parameterTypeNames);
+            int selectedType = EditorGUI.Popup(typeRect, Localization.Get("inspector.parameterType"), parameterType.enumValueIndex, parameterTypeNames);
             if(EditorGUI.EndChangeCheck())
             {
                 parameterType.enumValueIndex = selectedType;
@@ -757,13 +757,13 @@ namespace jp.lilxyzw.lilycalinventory
             switch((VRCParameterType)parameterType.enumValueIndex)
             {
                 case VRCParameterType.Float:
-                    EditorGUI.PropertyField(valueRect, floatValue, new GUIContent("Float Value"));
+                    EditorGUI.PropertyField(valueRect, floatValue, new GUIContent(Localization.Get("inspector.floatValue")));
                     break;
                 case VRCParameterType.Int:
-                    EditorGUI.PropertyField(valueRect, intValue, new GUIContent("Int Value"));
+                    EditorGUI.PropertyField(valueRect, intValue, new GUIContent(Localization.Get("inspector.intValue")));
                     break;
                 case VRCParameterType.Bool:
-                    EditorGUI.PropertyField(valueRect, boolValue, new GUIContent("Bool Value"));
+                    EditorGUI.PropertyField(valueRect, boolValue, new GUIContent(Localization.Get("inspector.boolValue")));
                     break;
             }
 

@@ -156,5 +156,7 @@
   
   "inspector.floatValue": "Float値",
   "inspector.intValue": "Int値",
-  "inspector.boolValue": "Bool値"
+  "inspector.boolValue": "Bool値",
+  
+  "inspector.parameterType": "パラメータータイプ"
 }
