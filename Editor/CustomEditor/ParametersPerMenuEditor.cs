@@ -117,6 +117,7 @@ namespace jp.lilxyzw.lilycalinventory
     [CustomPropertyDrawer(typeof(ParametersPerMenu))]
     internal class ParametersPerMenuDrawer : PropertyDrawer
     {
+        // 常量定义，使用readonly提高性能
         private static readonly string[] menuKeys = new[]
         {
             "inspector.showObjects",
@@ -144,6 +145,25 @@ namespace jp.lilxyzw.lilycalinventory
             "lilycalInventory_showAnimations"
         };
 
+        // 递归模式的EditorPrefs键
+        private const string RECURSIVE_RENDERER_MODE_KEY = "lilycalInventory_recursiveRendererMode";
+
+        // 缓存的GUIContent对象，减少GC
+        private static GUIContent[] s_menuItems;
+        private static GUIContent s_showHideComponentsContent;
+        private static GUIContent s_recursiveModeOnContent;
+        private static GUIContent s_recursiveModeOffContent;
+        private static GUIContent s_batchMaterialReplaceContent;
+
+        // 初始化静态内容
+        static ParametersPerMenuDrawer()
+        {
+            s_showHideComponentsContent = new GUIContent(Localization.S("inspector.showHideComponents"));
+            s_recursiveModeOnContent = new GUIContent("递归模式(开)", "开启后，拖入GameObject时会自动添加其所有子对象中的Renderer");
+            s_recursiveModeOffContent = new GUIContent("递归模式(关)", "开启后，拖入GameObject时会自动添加其所有子对象中的Renderer");
+            s_batchMaterialReplaceContent = new GUIContent("批量材质替换");
+        }
+
         private static bool GetShowState(int index)
         {
             return EditorPrefs.GetBool(editorPrefsKeys[index], false);
@@ -164,7 +184,11 @@ namespace jp.lilxyzw.lilycalinventory
 
         private static GUIContent[] GetMenuItems()
         {
-            return menuKeys.Select(key => new GUIContent(Localization.S(key))).ToArray();
+            if(s_menuItems == null)
+            {
+                s_menuItems = menuKeys.Select(key => new GUIContent(Localization.S(key))).ToArray();
+            }
+            return s_menuItems;
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -174,7 +198,7 @@ namespace jp.lilxyzw.lilycalinventory
 
             // 绘制按钮
             var buttonRect = new Rect(position.x, position.y, position.width, 20);
-            if(GUI.Button(buttonRect, Localization.S("inspector.showHideComponents")))
+            if(GUI.Button(buttonRect, s_showHideComponentsContent))
             {
                 ShowSettingsMenu(property);
             }
@@ -213,11 +237,10 @@ namespace jp.lilxyzw.lilycalinventory
             {
                 // 添加递归模式切换按钮
                 var recursiveModeButtonRect = position.SingleLine();
-                var isRecursiveMode = EditorPrefs.GetBool("lilycalInventory_recursiveRendererMode", false);
-                var buttonContent = new GUIContent(isRecursiveMode ? "递归模式(开)" : "递归模式(关)", "开启后，拖入GameObject时会自动添加其所有子对象中的Renderer");
-                if(GUI.Button(recursiveModeButtonRect, buttonContent))
+                var isRecursiveMode = EditorPrefs.GetBool(RECURSIVE_RENDERER_MODE_KEY, false);
+                if(GUI.Button(recursiveModeButtonRect, isRecursiveMode ? s_recursiveModeOnContent : s_recursiveModeOffContent))
                 {
-                    EditorPrefs.SetBool("lilycalInventory_recursiveRendererMode", !isRecursiveMode);
+                    EditorPrefs.SetBool(RECURSIVE_RENDERER_MODE_KEY, !isRecursiveMode);
                 }
                 position = position.NewLine();
 
@@ -235,7 +258,7 @@ namespace jp.lilxyzw.lilycalinventory
                         if(renderer != null)
                         {
                             var materials = renderer.sharedMaterials;
-                            for(int j = 0; j < materials.Length; j++)
+                            for(int j = 0; j < materials.Length && j < replaceTo.arraySize; j++)
                             {
                                 var originalMat = materials[j];
                                 if(originalMat != null)
@@ -257,8 +280,11 @@ namespace jp.lilxyzw.lilycalinventory
                     // 显示批量替换界面
                     if(unassignedMaterials.Count > 0)
                     {
-                        EditorGUI.LabelField(position.SingleLine(), "批量材质替换");
+                        EditorGUI.LabelField(position.SingleLine(), s_batchMaterialReplaceContent);
                         position = position.NewLine();
+                        
+                        // 使用缓存的GUIContent对象来减少GC
+                        var originalMatContent = new GUIContent();
                         
                         foreach(var kvp in unassignedMaterials)
                         {
@@ -271,6 +297,7 @@ namespace jp.lilxyzw.lilycalinventory
                             // 显示原始材质（左侧，禁用状态）
                             var originalRect = new Rect(lineRect.x, lineRect.y, lineRect.width * 0.5f - 2, lineRect.height);
                             EditorGUI.BeginDisabledGroup(true);
+                            originalMatContent.text = originalMat != null ? originalMat.name : "null";
                             EditorGUI.ObjectField(originalRect, originalMat, typeof(Material), false);
                             EditorGUI.EndDisabledGroup();
                             
@@ -307,7 +334,7 @@ namespace jp.lilxyzw.lilycalinventory
                     if(o is GameObject go)
                     {
                         // 在递归模式下，只要有任何子对象包含 Renderer 就允许拖入
-                        if(EditorPrefs.GetBool("lilycalInventory_recursiveRendererMode", false))
+                        if(EditorPrefs.GetBool(RECURSIVE_RENDERER_MODE_KEY, false))
                         {
                             return go.GetComponentsInChildren<Renderer>(true).Length > 0;
                         }
@@ -318,7 +345,8 @@ namespace jp.lilxyzw.lilycalinventory
                 }, (sp, obj) => {
                     if(obj is GameObject go)
                     {
-                        if(EditorPrefs.GetBool("lilycalInventory_recursiveRendererMode", false))
+                        bool isRecursiveMode = EditorPrefs.GetBool(RECURSIVE_RENDERER_MODE_KEY, false);
+                        if(isRecursiveMode)
                         {
                             // 在递归模式下，获取所有子对象的Renderer
                             var renderers = go.GetComponentsInChildren<Renderer>(true);
@@ -327,25 +355,25 @@ namespace jp.lilxyzw.lilycalinventory
                                 // 删除当前添加的项（因为DragAndDropList会自动添加一个）
                                 materialReplacers.arraySize--;
                                 
+                                // 使用HashSet来跟踪已添加的Renderer，避免重复检查
+                                var existingRenderers = new HashSet<Renderer>();
+                                for(int i = 0; i < materialReplacers.arraySize; i++)
+                                {
+                                    var existingRenderer = materialReplacers.GetArrayElementAtIndex(i).FindPropertyRelative("renderer").objectReferenceValue as Renderer;
+                                    if(existingRenderer != null)
+                                    {
+                                        existingRenderers.Add(existingRenderer);
+                                    }
+                                }
+                                
                                 // 添加所有找到的Renderer
                                 foreach(var renderer in renderers)
                                 {
-                                    // 检查是否已存在
-                                    bool exists = false;
-                                    for(int i = 0; i < materialReplacers.arraySize; i++)
+                                    if(!existingRenderers.Contains(renderer))
                                     {
-                                        var existingRenderer = materialReplacers.GetArrayElementAtIndex(i).FindPropertyRelative("renderer").objectReferenceValue as Renderer;
-                                        if(existingRenderer == renderer)
-                                        {
-                                            exists = true;
-                                            break;
-                                        }
-                                    }
-                                    
-                                    if(!exists)
-                                    {
+                                        int index = materialReplacers.arraySize;
                                         materialReplacers.arraySize++;
-                                        var element = materialReplacers.GetArrayElementAtIndex(materialReplacers.arraySize - 1);
+                                        var element = materialReplacers.GetArrayElementAtIndex(index);
                                         element.FindPropertyRelative("renderer").objectReferenceValue = renderer;
                                         var replaceTo = element.FindPropertyRelative("replaceTo");
                                         replaceTo.arraySize = renderer.sharedMaterials.Length;
@@ -394,12 +422,16 @@ namespace jp.lilxyzw.lilycalinventory
             for(int i = 0; i < menuItems.Length; i++)
             {
                 var index = i;
-                menu.AddItem(menuItems[i], GetShowState(index, property), () => {
-                    // 如果数组长度大于0，不允许隐藏
-                    using var arrayProp = property.FPR(propertyNames[index]);
-                    if(arrayProp.arraySize > 0) return;
-                    
-                    SetShowState(index, !GetShowState(index, property));
+                bool isEnabled = true;
+                
+                // 如果数组长度大于0，不允许隐藏但仍然显示选项（灰色）
+                using var arrayProp = property.FPR(propertyNames[index]);
+                if(arrayProp.arraySize > 0) isEnabled = false;
+                
+                bool isChecked = GetShowState(index, property);
+                menu.AddItem(menuItems[i], isChecked, () => {
+                    if(!isEnabled) return;
+                    SetShowState(index, !isChecked);
                 });
             }
 
@@ -410,22 +442,57 @@ namespace jp.lilxyzw.lilycalinventory
         {
             float height = 32; // 顶部空行(4) + 按钮高度(20) + 按钮下方间距(4) + 底部间距(4)
 
-            using var objects = property.FPR(propertyNames[0]);
-            using var blendShapeModifiers = property.FPR(propertyNames[1]);
-            using var materialReplacers = property.FPR(propertyNames[2]);
-            using var materialPropertyModifiers = property.FPR(propertyNames[3]);
-            using var clips = property.FPR(propertyNames[4]);
+            // 批量材质替换UI的高度计算
+            bool showMaterialReplacers = GetShowState(2, property);
+            if(showMaterialReplacers)
+            {
+                using var materialReplacers = property.FPR(propertyNames[2]);
+                if(materialReplacers.arraySize > 0)
+                {
+                    // 递归模式按钮高度
+                    height += GUIHelper.propertyHeight + GUIHelper.GetSpaceHeight();
+                    
+                    // 计算批量替换UI的高度
+                    var unassignedMaterialsCount = 0;
+                    for(int i = 0; i < materialReplacers.arraySize; i++)
+                    {
+                        var replacer = materialReplacers.GetArrayElementAtIndex(i);
+                        var renderer = replacer.FindPropertyRelative("renderer").objectReferenceValue as Renderer;
+                        var replaceTo = replacer.FindPropertyRelative("replaceTo");
+                        
+                        if(renderer != null)
+                        {
+                            var materials = renderer.sharedMaterials;
+                            for(int j = 0; j < materials.Length && j < replaceTo.arraySize; j++)
+                            {
+                                var originalMat = materials[j];
+                                if(originalMat != null)
+                                {
+                                    var replaceToElement = replaceTo.GetArrayElementAtIndex(j);
+                                    if(replaceToElement.objectReferenceValue == null)
+                                    {
+                                        unassignedMaterialsCount++;
+                                        break; // 只需要知道有未分配的材质，不需要计算具体数量
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if(unassignedMaterialsCount > 0)
+                    {
+                        // 标题 + 每个材质行 + 分隔线
+                        height += GUIHelper.propertyHeight + (GUIHelper.propertyHeight * unassignedMaterialsCount) + 8;
+                    }
+                }
+            }
 
-            if(GetShowState(0, property))
-                height += GUIHelper.GetListHeight(property, propertyNames[0]);
-            if(GetShowState(1, property))
-                height += GUIHelper.GetListHeight(property, propertyNames[1]);
-            if(GetShowState(2, property))
-                height += GUIHelper.GetListHeight(property, propertyNames[2]);
-            if(GetShowState(3, property))
-                height += GUIHelper.GetListHeight(property, propertyNames[3]);
-            if(GetShowState(4, property))
-                height += GUIHelper.GetListHeight(property, propertyNames[4]);
+            // 添加各个部分的高度
+            for(int i = 0; i < propertyNames.Length; i++)
+            {
+                if(GetShowState(i, property))
+                    height += GUIHelper.GetListHeight(property, propertyNames[i]);
+            }
 
             return height;
         }
