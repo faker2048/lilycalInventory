@@ -503,6 +503,9 @@ namespace jp.lilxyzw.lilycalinventory
                     height += GUIHelper.GetListHeight(property, propertyNames[i]);
             }
 
+            // 添加间距
+            height += GUIHelper.GetSpaceHeight((int)(height / GUIHelper.propertyHeight));
+
             return height;
         }
     }
@@ -734,37 +737,124 @@ namespace jp.lilxyzw.lilycalinventory
             "Bool"
         };
 
+        private static readonly string[] operationTypeNames = new[]
+        {
+            "Set",
+            "Copy"
+        };
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             using var parameterName = property.FPR("parameterName");
             using var parameterType = property.FPR("parameterType");
+            using var operationType = property.FPR("operationType");
             using var floatValue = property.FPR("floatValue");
             using var intValue = property.FPR("intValue");
             using var boolValue = property.FPR("boolValue");
+            using var sourceParameterName = property.FPR("sourceParameterName");
+            
+            // 状态退出时的操作相关属性
+            using var executeOnExit = property.FPR("executeOnExit");
+            using var exitOperationType = property.FPR("exitOperationType");
+            using var exitFloatValue = property.FPR("exitFloatValue");
+            using var exitIntValue = property.FPR("exitIntValue");
+            using var exitBoolValue = property.FPR("exitBoolValue");
+            using var exitSourceParameterName = property.FPR("exitSourceParameterName");
 
             EditorGUIUtility.labelWidth = 100;
             EditorGUI.PropertyField(position.SingleLine(), parameterName, new GUIContent(Localization.G("inspector.parameterName")));
 
+            // 操作类型选择
             EditorGUI.BeginChangeCheck();
-            var typeRect = position.NewLine();
-            int selectedType = EditorGUI.Popup(typeRect, new GUIContent(Localization.G("inspector.parameterType")), parameterType.enumValueIndex, parameterTypeNames.Select(name => new GUIContent(name)).ToArray());
+            var operationTypeRect = position.NewLine();
+            int selectedOperationType = EditorGUI.Popup(operationTypeRect, new GUIContent("Operation Type"), operationType.enumValueIndex, operationTypeNames.Select(name => new GUIContent(name)).ToArray());
             if(EditorGUI.EndChangeCheck())
             {
-                parameterType.enumValueIndex = selectedType;
+                operationType.enumValueIndex = selectedOperationType;
             }
 
-            var valueRect = position.NewLine();
-            switch((VRCParameterType)parameterType.enumValueIndex)
+            // 根据操作类型显示不同的UI
+            if((VRCParameterOperationType)operationType.enumValueIndex == VRCParameterOperationType.Set)
             {
-                case VRCParameterType.Float:
-                    EditorGUI.PropertyField(valueRect, floatValue, new GUIContent(Localization.G("inspector.floatValue")));
-                    break;
-                case VRCParameterType.Int:
-                    EditorGUI.PropertyField(valueRect, intValue, new GUIContent(Localization.G("inspector.intValue")));
-                    break;
-                case VRCParameterType.Bool:
-                    EditorGUI.PropertyField(valueRect, boolValue, new GUIContent(Localization.G("inspector.boolValue")));
-                    break;
+                // 参数类型选择
+                EditorGUI.BeginChangeCheck();
+                var typeRect = position.NewLine();
+                int selectedType = EditorGUI.Popup(typeRect, new GUIContent(Localization.G("inspector.parameterType")), parameterType.enumValueIndex, parameterTypeNames.Select(name => new GUIContent(name)).ToArray());
+                if(EditorGUI.EndChangeCheck())
+                {
+                    parameterType.enumValueIndex = selectedType;
+                }
+
+                // 参数值输入
+                var valueRect = position.NewLine();
+                switch((VRCParameterType)parameterType.enumValueIndex)
+                {
+                    case VRCParameterType.Float:
+                        EditorGUI.PropertyField(valueRect, floatValue, new GUIContent(Localization.G("inspector.floatValue")));
+                        break;
+                    case VRCParameterType.Int:
+                        EditorGUI.PropertyField(valueRect, intValue, new GUIContent(Localization.G("inspector.intValue")));
+                        break;
+                    case VRCParameterType.Bool:
+                        EditorGUI.PropertyField(valueRect, boolValue, new GUIContent(Localization.G("inspector.boolValue")));
+                        break;
+                }
+            }
+            else // Copy模式
+            {
+                // 源参数名输入
+                var sourceRect = position.NewLine();
+                EditorGUI.PropertyField(sourceRect, sourceParameterName, new GUIContent("Source Parameter"));
+                
+                // 添加两个空行，保持高度一致
+                position.NewLine();
+                position.NewLine();
+            }
+            
+            // 添加一条分隔线
+            var separatorRect = position.NewLine();
+            EditorGUI.DrawRect(new Rect(separatorRect.x, separatorRect.y + 2, separatorRect.width, 1), new Color(0.5f, 0.5f, 0.5f, 0.5f));
+            
+            // 状态退出时的操作
+            var executeOnExitRect = position.NewLine();
+            EditorGUI.PropertyField(executeOnExitRect, executeOnExit, new GUIContent("Execute On Exit"));
+            
+            // 如果选择在状态退出时执行，则显示相关设置
+            if(executeOnExit.boolValue)
+            {
+                // 退出时的操作类型选择
+                EditorGUI.BeginChangeCheck();
+                var exitOperationTypeRect = position.NewLine();
+                int selectedExitOperationType = EditorGUI.Popup(exitOperationTypeRect, new GUIContent("Exit Operation Type"), exitOperationType.enumValueIndex, operationTypeNames.Select(name => new GUIContent(name)).ToArray());
+                if(EditorGUI.EndChangeCheck())
+                {
+                    exitOperationType.enumValueIndex = selectedExitOperationType;
+                }
+                
+                // 根据退出操作类型显示不同的UI
+                if((VRCParameterOperationType)exitOperationType.enumValueIndex == VRCParameterOperationType.Set)
+                {
+                    // 退出时的参数值输入
+                    var exitValueRect = position.NewLine();
+                    switch((VRCParameterType)parameterType.enumValueIndex)
+                    {
+                        case VRCParameterType.Float:
+                            EditorGUI.PropertyField(exitValueRect, exitFloatValue, new GUIContent("Exit Float Value"));
+                            break;
+                        case VRCParameterType.Int:
+                            EditorGUI.PropertyField(exitValueRect, exitIntValue, new GUIContent("Exit Int Value"));
+                            break;
+                        case VRCParameterType.Bool:
+                            EditorGUI.PropertyField(exitValueRect, exitBoolValue, new GUIContent("Exit Bool Value"));
+                            break;
+                    }
+                }
+                else // 退出时的Copy模式
+                {
+                    // 退出时的源参数名输入
+                    var exitSourceRect = position.NewLine();
+                    EditorGUI.PropertyField(exitSourceRect, exitSourceParameterName, new GUIContent("Exit Source Parameter"));
+                }
             }
 
             EditorGUIUtility.labelWidth = 0;
@@ -772,7 +862,29 @@ namespace jp.lilxyzw.lilycalinventory
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return GUIHelper.propertyHeight * 3 + GUIHelper.GetSpaceHeight(3);
+            float height = GUIHelper.propertyHeight * 4; // 基本高度：参数名 + 操作类型 + 参数类型/源参数 + 参数值/空行
+            
+            // 检查是否是Copy模式，如果是，则需要额外的空行
+            using var operationType = property.FPR("operationType");
+            if((VRCParameterOperationType)operationType.enumValueIndex == VRCParameterOperationType.Copy)
+            {
+                height += GUIHelper.propertyHeight; // 额外的空行
+            }
+            
+            // 添加分隔线和Execute On Exit选项的高度
+            height += GUIHelper.propertyHeight * 2;
+            
+            // 如果启用了状态退出时执行，则添加额外的高度
+            using var executeOnExit = property.FPR("executeOnExit");
+            if(executeOnExit.boolValue)
+            {
+                height += GUIHelper.propertyHeight * 2; // 退出操作类型 + 退出值/源参数
+            }
+            
+            // 添加间距
+            height += GUIHelper.GetSpaceHeight((int)(height / GUIHelper.propertyHeight));
+            
+            return height;
         }
     }
 

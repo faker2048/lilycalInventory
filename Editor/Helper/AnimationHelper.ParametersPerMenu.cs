@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 
 namespace jp.lilxyzw.lilycalinventory
@@ -70,8 +71,146 @@ namespace jp.lilxyzw.lilycalinventory
                 clipDefault.AddDefault(clip, gameObject);
                 clipChanged.Add(clip);
             }
+
+            #if LIL_VRCSDK3A
+            // 处理 VRCParameterSetter
+            foreach(var setter in parameter.vrcParameterSetters)
+            {
+                if(string.IsNullOrEmpty(setter.parameterName)) continue;
+                
+                // 我们不需要在 clipDefault 中添加任何内容，因为 VRCParameterSetter 是通过 VRCAvatarParameterDriver 实现的
+                // 而不是通过动画曲线
+            }
+            #endif
+            
             return (clipDefault, clipChanged);
         }
+
+        #if LIL_VRCSDK3A
+        /// <summary>
+        /// 为状态添加 VRCAvatarParameterDriver 组件，处理 VRCParameterSetter
+        /// </summary>
+        /// <param name="state">要添加驱动器的状态</param>
+        /// <param name="setters">参数设置器数组</param>
+        internal static void AddVRCParameterDriverToState(AnimatorState state, VRCParameterSetter[] setters)
+        {
+            if(setters == null || setters.Length == 0) return;
+            
+            // 过滤出进入状态时执行的参数设置器
+            var enterSetters = setters.Where(s => !string.IsNullOrEmpty(s.parameterName)).ToArray();
+            if(enterSetters.Length > 0)
+            {
+                // 查找现有的VRCAvatarParameterDriver组件，如果没有则创建一个新的
+                var driver = state.behaviours.OfType<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>().FirstOrDefault();
+                if(driver == null)
+                {
+                    driver = state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>();
+                    driver.localOnly = false; // 全局参数
+                }
+
+                // 添加参数设置
+                foreach(var setter in enterSetters)
+                {
+                    var parameter = new VRC.SDKBase.VRC_AvatarParameterDriver.Parameter();
+                    parameter.name = setter.parameterName;
+
+                    // 根据参数类型设置值和操作类型
+                    switch(setter.operationType)
+                    {
+                        case VRCParameterOperationType.Set:
+                            parameter.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set;
+                            
+                            // 根据参数类型设置值
+                            switch(setter.parameterType)
+                            {
+                                case VRCParameterType.Float:
+                                    parameter.value = setter.floatValue;
+                                    break;
+                                case VRCParameterType.Int:
+                                    parameter.value = setter.intValue;
+                                    break;
+                                case VRCParameterType.Bool:
+                                    parameter.value = setter.boolValue ? 1 : 0;
+                                    break;
+                            }
+                            break;
+                            
+                        case VRCParameterOperationType.Copy:
+                            parameter.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Copy;
+                            parameter.source = setter.sourceParameterName;
+                            break;
+                    }
+
+                    driver.parameters.Add(parameter);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 为状态机中除指定状态外的所有状态添加退出时的参数驱动器
+        /// </summary>
+        /// <param name="stateMachine">状态机</param>
+        /// <param name="excludeState">要排除的状态（当前状态）</param>
+        /// <param name="setters">参数设置器数组</param>
+        internal static void AddExitVRCParameterDriverToOtherStates(AnimatorStateMachine stateMachine, AnimatorState excludeState, VRCParameterSetter[] setters)
+        {
+            if(setters == null || setters.Length == 0) return;
+            
+            // 过滤出退出状态时执行的参数设置器
+            var exitSetters = setters.Where(s => s.executeOnExit && !string.IsNullOrEmpty(s.parameterName)).ToArray();
+            if(exitSetters.Length == 0) return;
+            
+            // 为状态机中除了excludeState外的所有状态添加退出时的参数驱动器
+            foreach(var stateInfo in stateMachine.states)
+            {
+                if(stateInfo.state == excludeState) continue;
+                
+                // 查找现有的VRCAvatarParameterDriver组件，如果没有则创建一个新的
+                var driver = stateInfo.state.behaviours.OfType<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>().FirstOrDefault();
+                if(driver == null)
+                {
+                    driver = stateInfo.state.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>();
+                    driver.localOnly = false; // 全局参数
+                }
+                
+                // 添加参数设置
+                foreach(var setter in exitSetters)
+                {
+                    var parameter = new VRC.SDKBase.VRC_AvatarParameterDriver.Parameter();
+                    parameter.name = setter.parameterName;
+                    
+                    // 根据参数类型设置值和操作类型
+                    switch(setter.exitOperationType)
+                    {
+                        case VRCParameterOperationType.Set:
+                            parameter.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set;
+                            
+                            // 根据参数类型设置值
+                            switch(setter.parameterType)
+                            {
+                                case VRCParameterType.Float:
+                                    parameter.value = setter.exitFloatValue;
+                                    break;
+                                case VRCParameterType.Int:
+                                    parameter.value = setter.exitIntValue;
+                                    break;
+                                case VRCParameterType.Bool:
+                                    parameter.value = setter.exitBoolValue ? 1 : 0;
+                                    break;
+                            }
+                            break;
+                            
+                        case VRCParameterOperationType.Copy:
+                            parameter.type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Copy;
+                            parameter.source = setter.exitSourceParameterName;
+                            break;
+                    }
+                    
+                    driver.parameters.Add(parameter);
+                }
+            }
+        }
+        #endif
 
         // ObjectToggler
         internal static void ToClipDefault(this ObjectToggler toggler, InternalClip clip)

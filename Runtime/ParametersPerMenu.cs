@@ -105,9 +105,19 @@ namespace jp.lilxyzw.lilycalinventory.runtime
     {
         [LILLocalize] public string parameterName;
         public VRCParameterType parameterType = VRCParameterType.Float;
+        public VRCParameterOperationType operationType = VRCParameterOperationType.Set;
         [LILLocalize] public float floatValue;
         [LILLocalize] public int intValue;
         [LILLocalize] public bool boolValue;
+        [LILLocalize] public string sourceParameterName; // 用于Copy模式，指定要复制的源参数名
+        
+        // 状态退出时的操作
+        public bool executeOnExit = false; // 是否在状态退出时执行
+        public VRCParameterOperationType exitOperationType = VRCParameterOperationType.Set;
+        [LILLocalize] public float exitFloatValue;
+        [LILLocalize] public int exitIntValue;
+        [LILLocalize] public bool exitBoolValue;
+        [LILLocalize] public string exitSourceParameterName; // 用于Copy模式，指定要复制的源参数名
     }
 
     // VRCパラメータの型
@@ -116,5 +126,12 @@ namespace jp.lilxyzw.lilycalinventory.runtime
         Float,
         Int,
         Bool
+    }
+
+    // VRCパラメータの操作タイプ
+    internal enum VRCParameterOperationType
+    {
+        Set,
+        Copy
     }
 }

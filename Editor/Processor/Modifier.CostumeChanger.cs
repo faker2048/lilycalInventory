@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using System.Linq;
 
 #if LIL_VRCSDK3A
 using VRC.SDKBase;
@@ -18,26 +19,26 @@ namespace jp.lilxyzw.lilycalinventory
         {
             internal static void ApplyCostumeChanger(AnimatorController controller, bool hasWriteDefaultsState, CostumeChanger[] changers, BlendTree root, List<InternalParameter> parameters)
             {
-                foreach(var changer in changers)
+                foreach (var changer in changers)
                 {
                     var costumeCount = changer.costumes.Length;
                     var bits = ObjHelper.ToNBitInt(costumeCount);
-                    if(costumeCount != 0)
+                    if (costumeCount != 0)
                     {
                         var clipDefaults = new InternalClip[changer.costumes.Length];
                         var clipChangeds = new InternalClip[changer.costumes.Length];
 
                         // 各衣装の設定値とprefab初期値を取得したAnimationClipを作成
-                        for(int i = 0; i < changer.costumes.Length; i++)
+                        for (int i = 0; i < changer.costumes.Length; i++)
                         {
                             var costume = changer.costumes[i];
                             (clipDefaults[i], clipChangeds[i]) = costume.parametersPerMenu.CreateClip(ctx.AvatarRootObject, costume.menuName);
                         }
 
                         // 同期事故防止のためにオブジェクトのオンオフ状況をコンポーネントの設定に合わせる
-                        foreach(var toggler in changer.costumes[changer.defaultValue].parametersPerMenu.objects)
+                        foreach (var toggler in changer.costumes[changer.defaultValue].parametersPerMenu.objects)
                         {
-                            if(toggler.obj) toggler.obj.SetActive(toggler.value);
+                            if (toggler.obj) toggler.obj.SetActive(toggler.value);
                         }
 
                         // prefab初期値AnimationClipをマージ
@@ -45,7 +46,7 @@ namespace jp.lilxyzw.lilycalinventory
 
                         // 各衣装の未設定値をprefab初期値で埋める
                         var clips = new AnimationClip[clipChangeds.Length];
-                        for(int i = 0; i < clipChangeds.Length; i++)
+                        for (int i = 0; i < clipChangeds.Length; i++)
                         {
                             clipChangeds[i] = InternalClip.MergeAndCreate(clipChangeds[i], clipDefault);
                             clipChangeds[i].name = $"{changer.costumes[i].menuName}_Merged";
@@ -54,15 +55,45 @@ namespace jp.lilxyzw.lilycalinventory
                         }
 
                         // AnimatorControllerに追加
-                        if(root) AnimationHelper.AddCostumeChangerTree(controller, clips, changer.menuName, changer.parameterName, changer.defaultValue, root);
+                        if (root) AnimationHelper.AddCostumeChangerTree(controller, clips, changer.menuName, changer.parameterName, changer.defaultValue, root);
                         else AnimationHelper.AddCostumeChangerLayer(controller, hasWriteDefaultsState, clips, changer.menuName, changer.parameterName, changer.defaultValue);
+
+#if LIL_VRCSDK3A
+                        // 为每个衣装的 State 添加 VRCParameterDriver 组件，以处理 vrcParameterSetters
+                        foreach (var layer in controller.layers)
+                        {
+                            if (layer.name == changer.menuName)
+                            {
+                                for (int i = 0; i < changer.costumes.Length; i++)
+                                {
+                                    var costume = changer.costumes[i];
+                                    Debug.Log($"costume.parametersPerMenu.vrcParameterSetters.Length: {costume.parametersPerMenu.vrcParameterSetters.Length}");
+                                    if (costume.parametersPerMenu.vrcParameterSetters.Length == 0) continue;
+
+                                    // 查找对应的 State
+                                    foreach (var state in layer.stateMachine.states)
+                                    {
+                                        if (state.state.name == $"{costume.menuName}_Merged")
+                                        {
+                                            // 使用辅助方法添加 VRCParameterDriver
+                                            AnimationHelper.AddVRCParameterDriverToState(state.state, costume.parametersPerMenu.vrcParameterSetters);
+                                            
+                                            // 为其他状态添加退出时的参数驱动器
+                                            AnimationHelper.AddExitVRCParameterDriverToOtherStates(layer.stateMachine, state.state, costume.parametersPerMenu.vrcParameterSetters);
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+#endif
                     }
                     else
                     {
                         controller.TryAddParameter(changer.parameterName, changer.defaultValue);
                     }
 
-                    #if LIL_VRCSDK3A
+#if LIL_VRCSDK3A
                     // パラメーターを追加
                     if(changer.isLocalOnly)
                     {
@@ -96,7 +127,12 @@ namespace jp.lilxyzw.lilycalinventory
                                 writeDefaultValues = hasWriteDefaultsState
                             };
 
-                            var driverComp = stateComp.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+                            // 查找现有的VRCAvatarParameterDriver组件，如果没有则创建一个新的
+                            var driverComp = stateComp.behaviours.OfType<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>().FirstOrDefault();
+                            if(driverComp == null)
+                            {
+                                driverComp = stateComp.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>();
+                            }
                             driverComp.localOnly = true; // 圧縮はローカルでいい
 
                             stateMachineComp.AddState(stateComp, stateMachineComp.entryPosition + new Vector3(200,costumeCount*25-i*50,0));
@@ -116,7 +152,12 @@ namespace jp.lilxyzw.lilycalinventory
                                 writeDefaultValues = hasWriteDefaultsState
                             };
 
-                            var driverDecomp = stateDecomp.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+                            // 查找现有的VRCAvatarParameterDriver组件，如果没有则创建一个新的
+                            var driverDecomp = stateDecomp.behaviours.OfType<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>().FirstOrDefault();
+                            if(driverDecomp == null)
+                            {
+                                driverDecomp = stateDecomp.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>();
+                            }
                             driverDecomp.localOnly = false; // 展開はグローバル
                             driverDecomp.parameters.Add(new VRC_AvatarParameterDriver.Parameter(){
                                 type = VRC_AvatarParameterDriver.ChangeType.Set,
@@ -164,9 +205,9 @@ namespace jp.lilxyzw.lilycalinventory
                         };
                         controller.AddLayer(layerDecomp);
                     }
-                    #else
+#else
                     parameters.Add(new InternalParameter(changer.parameterName, changer.defaultValue, changer.isLocalOnly, changer.isSave, InternalParameterType.Int));
-                    #endif
+#endif
                 }
             }
         }

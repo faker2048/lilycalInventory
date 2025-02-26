@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using System.Linq;
 
 #if LIL_VRCSDK3A
 using VRC.SDK3.Avatars.Components;
@@ -51,7 +52,12 @@ namespace jp.lilxyzw.lilycalinventory
                     transitionToDefault.AddCondition(AnimatorConditionMode.IfNot, 1, preset.parameterName);
                     transitionToDefault.duration = 0;
 
-                    var driver = stateChanged.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+                    // 查找现有的VRCAvatarParameterDriver组件，如果没有则创建一个新的
+                    var driver = stateChanged.behaviours.OfType<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>().FirstOrDefault();
+                    if(driver == null)
+                    {
+                        driver = stateChanged.AddStateMachineBehaviour<VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver>();
+                    }
                     driver.localOnly = true;
                     foreach(var item in preset.presetItems)
                     {
