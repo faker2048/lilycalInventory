@@ -114,17 +114,30 @@ namespace jp.lilxyzw.lilycalinventory
             return p;
         }
 
-        // AutoDresserをCostumeChangerに変換
+        /// <summary>
+        /// 将AutoDresser数组转换为Costume数组
+        /// </summary>
+        /// <param name="dressers">要转换的AutoDresser数组</param>
+        /// <param name="avatarRoot">输出参数：Avatar的根节点Transform</param>
+        /// <param name="changer">CostumeChanger组件实例</param>
+        /// <param name="presets">预设数组</param>
+        /// <param name="dresserDefOverride">可选参数：强制指定默认的AutoDresser</param>
+        /// <returns>转换后的Costume数组</returns>
         internal static Costume[] DresserToCostumes(this AutoDresser[] dressers, out Transform avatarRoot, CostumeChanger changer, Preset[] presets, AutoDresser dresserDefOverride = null)
         {
             avatarRoot = null;
+            // 如果输入的dressers为空，直接返回null
             if(dressers == null || dressers.Length == 0) return null;
+            // 用于存储默认的Costume
             Costume def = null;
+            // 存储所有转换后的Costume列表
             var costumes = new List<Costume>();
             foreach(var dresser in dressers)
             {
                 var obj = dresser.gameObject;
+                // 只初始化一次 avatarRoot
                 if(avatarRoot == null) avatarRoot = obj.GetAvatarRoot();
+                // 创建新的Costume实例并复制AutoDresser的相关属性
                 var cos = new Costume{
                     menuName = dresser.menuName,
                     icon = dresser.icon,
@@ -132,33 +145,41 @@ namespace jp.lilxyzw.lilycalinventory
                     parentOverrideMA = dresser.parentOverrideMA,
                     parametersPerMenu = dresser.parameter.Clone()
                 };
+                // 添加对象切换器，设置为启用状态
                 cos.parametersPerMenu.objects = cos.parametersPerMenu.objects.Append(new ObjectToggler{obj = obj, value = true}).ToArray();
+                
+                // 处理默认Costume的逻辑
                 if(dresserDefOverride && dresser == dresserDefOverride) def = cos;
                 else if(!dresserDefOverride && obj.activeSelf)
                 {
+                    // 如果没有指定默认dresser且当前对象是激活状态
                     if(def == null)
                     {
                         def = cos;
+                        // 在预设中替换组件
                         presets.ReplaceComponent(dresser, changer, 0);
                     }
-
-                    // 複数衣装がオンの場合にエラー
+                    // 如果已经存在默认Costume，则报错（不允许多个激活的衣装）
                     else ErrorHelper.Report("dialog.error.defaultDuplication", dressers);
                 }
                 else
                 {
+                    // 非默认的Costume添加到列表中
                     presets.ReplaceComponent(dresser, changer, costumes.Count);
                     costumes.Add(cos);
                 }
             }
+            
+            // 错误检查：如果没有找到默认Costume
             if(def == null)
             {
-                // 全衣装がオフの場合にエラー
                 ErrorHelper.Report("dialog.error.allObjectOff", dressers);
                 return null;
             }
-            // アバターのルートが見つからない場合にエラー
+            // 错误检查：如果没有找到Avatar根节点
             if(!avatarRoot) ErrorHelper.Report("dialog.error.avatarRootNofFound", dressers);
+            
+            // 将默认Costume插入到列表开头
             costumes.Insert(0, def);
             return costumes.ToArray();
         }
